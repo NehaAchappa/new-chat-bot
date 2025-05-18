@@ -1,6 +1,6 @@
 streamlit
-langchain
+langchain>=0.0.182
+langchain-google-genai
 faiss-cpu
 PyPDF2
-langchain-google-genai
-langchain-community
+pypdfium2

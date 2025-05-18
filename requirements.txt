@@ -1,6 +1,6 @@
-streamlit
-langchain>=0.0.182
 langchain-google-genai
+langchain
+streamlit
 faiss-cpu
 PyPDF2
 pypdfium2

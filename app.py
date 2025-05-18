@@ -16,3 +16,7 @@ query = st.text_input("Enter your question:")
 if query:
     response = st.session_state.chatbot({"question": query})
     st.write("**Answer:**", response["answer"])
+    import os
+import streamlit as st
+
+os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]

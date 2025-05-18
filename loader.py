@@ -1,16 +1,16 @@
-from langchain_community.document_loaders import PyPDFLoader
+from langchain.document_loaders import PyPDFium2Loader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import GoogleGenerativeAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.vectorstores.faiss import FAISS
 
-def load_and_index_pdf(pdf_path):
-    loader = PyPDFLoader(pdf_path)
+def load_and_index_pdf(pdf_path: str):
+    loader = PyPDFium2Loader(pdf_path)
     documents = loader.load()
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    texts = text_splitter.split_documents(documents)
+    chunks = text_splitter.split_documents(documents)
 
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vectorstore = FAISS.from_documents(texts, embeddings)
 
+    vectorstore = FAISS.from_documents(chunks, embeddings)
     return vectorstore

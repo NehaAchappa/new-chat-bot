@@ -1,35 +1,45 @@
 import os
+import streamlit as st
 from langchain.vectorstores import FAISS
 from langchain.embeddings import GoogleGenerativeAIEmbeddings
 from langchain.document_loaders import TextLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
 
-# Set your Google API key
-os.environ["GOOGLE_API_KEY"] = "your-api-key-here"
+# Load API key
+load_dotenv()
+os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
 
-# Load and split the documents
-loader = TextLoader("data/docs.txt")
-documents = loader.load()
+# Initialize session state
+if "qa_chain" not in st.session_state:
+    # Load and process documents
+    loader = TextLoader("data/docs.txt")
+    documents = loader.load()
 
-text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-docs = text_splitter.split_documents(documents)
+    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    docs = text_splitter.split_documents(documents)
 
-# Create embeddings and FAISS vectorstore
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-vectorstore = FAISS.from_documents(docs, embeddings)
+    # Create vector store
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    vectorstore = FAISS.from_documents(docs, embeddings)
 
-# Setup Retriever and QA chain
-retriever = vectorstore.as_retriever()
-llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.2)
+    # Set up retriever and LLM
+    retriever = vectorstore.as_retriever()
+    llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.2)
 
-qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+    # Create RetrievalQA chain
+    st.session_state.qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
-# Ask a question
-while True:
-    query = input("You: ")
-    if query.lower() in ["exit", "quit"]:
-        break
-    response = qa_chain.run(query)
-    print("Bot:", response)
+# Streamlit UI
+st.set_page_config(page_title="RAG Chatbot", page_icon="🤖")
+st.title("📚 RAG Chatbot with Gemini")
+st.write("Ask anything related to the knowledge base!")
+
+query = st.text_input("Your question:", placeholder="Ask a question...")
+
+if query:
+    response = st.session_state.qa_chain.run(query)
+    st.markdown("### 🤖 Answer")
+    st.write(response)

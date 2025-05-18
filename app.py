@@ -1,48 +1,35 @@
-import streamlit as st
-import os 
-os.environ["GOOGLE_API_KEY"]=st.secrets["GOOGLE_API_KEY"]
+import os
+from langchain.vectorstores import FAISS
+from langchain.embeddings import GoogleGenerativeAIEmbeddings
+from langchain.document_loaders import TextLoader
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage 
 
-# Initialize the model
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+# Set your Google API key
+os.environ["GOOGLE_API_KEY"] = "your-api-key-here"
 
-# Set page title
-st.set_page_config(page_title="Gemini Chatbot", page_icon="🤖")
+# Load and split the documents
+loader = TextLoader("data/docs.txt")
+documents = loader.load()
 
-st.title("🤖 Gemini 2.0 Chatbot")
+text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+docs = text_splitter.split_documents(documents)
 
-# Initialize session state for chat history
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = [SystemMessage(content="You are a helpful assistant.")]
+# Create embeddings and FAISS vectorstore
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+vectorstore = FAISS.from_documents(docs, embeddings)
 
-# User input box
-user_input = st.chat_input("Type your message...")
+# Setup Retriever and QA chain
+retriever = vectorstore.as_retriever()
+llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.2)
 
-# If the user submits a message
-if user_input:
-    # Append human message to history
-    st.session_state.chat_history.append(HumanMessage(content=user_input))
+qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
-    # Display user's message
-    with st.chat_message("user"):
-        st.markdown(user_input)
-
-    # Call the LLM
-    result = llm.invoke(st.session_state.chat_history)
-
-    # Append AI response
-    st.session_state.chat_history.append(AIMessage(content=result.content))
-
-    # Display AI response
-    with st.chat_message("assistant"):
-        st.markdown(result.content)
-
-# Display full chat history
-for msg in st.session_state.chat_history[1:]:  # Skip the initial SystemMessage
-    if isinstance(msg, HumanMessage):
-        with st.chat_message("user"):
-            st.markdown(msg.content)
-    elif isinstance(msg, AIMessage):
-        with st.chat_message("assistant"):
-            st.markdown(msg.content)
+# Ask a question
+while True:
+    query = input("You: ")
+    if query.lower() in ["exit", "quit"]:
+        break
+    response = qa_chain.run(query)
+    print("Bot:", response)
